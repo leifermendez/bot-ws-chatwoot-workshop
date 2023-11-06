@@ -1,3 +1,4 @@
+const { readFile } = require('fs/promises');
 class ChatwootClass {
 
     config = {
@@ -238,26 +239,33 @@ class ChatwootClass {
     }
 
     /**
+     * Esta funcion ha sido modificada para poder enviar archivos multimedia y texto
      * [messages]
      * @param {mode}  "incoming" | "outgoing"
      * @param {*} dataIn 
      * @returns 
      */
-    createMessage = async (dataIn = { msg: '', mode: '', conversation_id: '' }) => {
+    createMessage = async (dataIn = { msg: '', mode: '', conversation_id: '', attachment: [] }) => {
         try {
-
-            const body = {
-                content: dataIn.msg,
-                message_type: dataIn.mode,
-                private: true,
-            }
-
             const url = this.buildBaseUrl(`/conversations/${dataIn.conversation_id}/messages`)
+            const form = new FormData();
+          
+            form.set("content", dataIn.msg);
+            form.set("message_type", dataIn.mode);
+            form.set("private", "true");
+
+            if(dataIn.attachment?.length){
+                const fileName  = `${dataIn.attachment[0]}`.split('/').pop()
+                const blob = new Blob([await readFile(dataIn.attachment[0])]);
+                form.set("attachments[]", blob, fileName);
+            }
             const dataFetch = await fetch(url,
                 {
                     method: "POST",
-                    headers: this.buildHeader(),
-                    body: JSON.stringify(body)
+                    headers: {
+                        api_access_token:this.config.token
+                    },
+                    body: form
                 }
             );
             const data = await dataFetch.json();
